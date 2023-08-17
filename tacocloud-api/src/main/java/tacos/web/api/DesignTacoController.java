@@ -1,12 +1,14 @@
 //tag::recents[]
 package tacos.web.api;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +19,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.RepresentationModel;
+import org.springframework.hateoas.server.core.Relation;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import tacos.Taco;
 import tacos.data.TacoRepository;
@@ -41,53 +51,22 @@ public class DesignTacoController {
             0, 12, Sort.by("createdAt").descending());
     return tacoRepo.findAll(page).getContent();
   }
-  //end::recents[]
+ 
+  
+  @GetMapping("/recents")
+  public CollectionModel<Taco> recentsTacos() {
+	  PageRequest pageRequest = PageRequest.of(
+			  0, 12, Sort.by("createdAt").descending());
 
-//  @GetMapping("/recenth")
-//  public Resources<TacoResource> recentTacosH() {
-//    PageRequest page = PageRequest.of(
-//            0, 12, Sort.by("createdAt").descending());
-//    List<Taco> tacos = tacoRepo.findAll(page).getContent();
-//    
-//    List<TacoResource> tacoResources = 
-//        new TacoResourceAssembler().toResources(tacos);
-//    Resources<TacoResource> recentResources = 
-//        new Resources<TacoResource>(tacoResources);
-//    recentResources.add(
-//        linkTo(methodOn(DesignTacoController.class).recentTacos())
-//        .withRel("recents"));
-//    return recentResources;
-//  }
+      List<Taco> tacos = tacoRepo.findAll(pageRequest).getContent();
+      CollectionModel<Taco> recentResources = CollectionModel.of(tacos);
 
-  
-  
-//ControllerLinkBuilder.linkTo(DesignTacoController.class)
-//.slash("recent")
-//.withRel("recents"));
+      Link link = linkTo(methodOn(DesignTacoController.class).recentsTacos())
+              .withRel("recents");
+      recentResources.add(link);
 
-  
-  
-  
-//  @GetMapping("/recenth")
-//  public Resources<TacoResource> recenthTacos() {
-//    PageRequest page = PageRequest.of(
-//            0, 12, Sort.by("createdAt").descending());
-//    List<Taco> tacos = tacoRepo.findAll(page).getContent();
-//
-//    List<TacoResource> tacoResources = new TacoResourceAssembler().toResources(tacos);
-//    
-//    Resources<TacoResource> tacosResources = new Resources<>(tacoResources);
-////    Link recentsLink = ControllerLinkBuilder
-////        .linkTo(DesignTacoController.class)
-////        .slash("recent")
-////        .withRel("recents");
-//
-//    Link recentsLink = 
-//        linkTo(methodOn(DesignTacoController.class).recentTacos())
-//        .withRel("recents");
-//    tacosResources.add(recentsLink);
-//    return tacosResources;
-//  }
+      return recentResources;
+  }
   
   //tag::postTaco[]
   @PostMapping(consumes="application/json")
@@ -97,16 +76,22 @@ public class DesignTacoController {
   }
   //end::postTaco[]
   
+//  @GetMapping
+//  public List<Taco> findAll(){
+//      return tacoRepo.findAll();
+//  }
   
   @GetMapping("/{id}")
-  public Taco tacoById(@PathVariable("id") Long id) {
+  public ResponseEntity<Taco> tacoById(@PathVariable("id") Long id) {
     Optional<Taco> optTaco = tacoRepo.findById(id);
     if (optTaco.isPresent()) {
-      return optTaco.get();
+      return optTaco.map(taco -> new ResponseEntity<>(taco, HttpStatus.OK))
+              .orElseGet(() -> new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
     }
-    return null;
-  }
-  
+    return null;    
+  }  
+
+    
 //  @GetMapping("/{id}")
 //  public ResponseEntity<Taco> tacoById(@PathVariable("id") Long id) {
 //    Optional<Taco> optTaco = tacoRepo.findById(id);
